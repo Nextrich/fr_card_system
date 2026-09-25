@@ -1,0 +1,103 @@
+# Спокойной ночки, чудо! #сон #солнце
+---
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import numpy as np
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from PyQt6.QtGui import QImage, QPixmap
+
+fps = 30
+duration = 4.0
+np.random.seed(11)
+
+# Звёзды фиксируем один раз — чтобы не мерцали случайно между кадрами
+_STARS = [(np.random.uniform(-9.5, 9.5), np.random.uniform(-7.5, 7.5),
+           np.random.uniform(8, 40), np.random.uniform(0, 6.28))
+          for _ in range(70)]
+
+def _pixmap_from_fig(fig):
+    canvas = FigureCanvasAgg(fig)
+    canvas.draw()
+    buf = canvas.buffer_rgba()
+    w, h = canvas.get_width_height()
+    img = QImage(buf, w, h, QImage.Format.Format_RGBA8888)
+    px = QPixmap.fromImage(img).copy()
+    plt.close(fig)
+    return px
+
+def build_frame(t):
+    fig = plt.figure(figsize=(6, 4), dpi=100, facecolor="#0b1a2b")
+    ax = fig.add_subplot(111)
+    ax.set_xlim(-10, 10)
+    ax.set_ylim(-8, 8)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    # Мерцающие звёзды
+    for (x, y, s, phase) in _STARS:
+        alpha = 0.4 + 0.6 * (0.5 + 0.5 * np.sin(t * 2 + phase))
+        ax.scatter([x], [y], s=s, color="white", alpha=alpha, zorder=1)
+
+    # Месяц — слегка парит
+    moon_x = 4 + 0.15 * np.sin(t / duration * 2 * np.pi)
+    moon_y = 3 + 0.15 * np.cos(t / duration * 2 * np.pi)
+
+    # Свечение вокруг луны
+    for r, alpha in [(2.8, 0.08), (2.2, 0.15), (1.7, 0.22)]:
+        ax.add_patch(patches.Circle((moon_x, moon_y), r,
+                     color="#f6f1d1", alpha=alpha, zorder=1))
+
+    # Тело луны
+    ax.add_patch(patches.Circle((moon_x, moon_y), 1.5,
+                 color="#f6f1d1", zorder=2))
+    # Тень, отрезающая часть — получается месяц
+    ax.add_patch(patches.Circle((moon_x + 0.7, moon_y + 0.4), 1.4,
+                 color="#0b1a2b", zorder=3))
+
+    # Глазки закрытые (спит)
+    ax.plot([moon_x - 0.9, moon_x - 0.55, moon_x - 0.2],
+            [moon_y + 0.3, moon_y + 0.05, moon_y + 0.3],
+            color="#4a4a4a", lw=2, zorder=4)
+    ax.plot([moon_x - 0.1, moon_x + 0.2, moon_x + 0.5],
+            [moon_y + 0.3, moon_y + 0.05, moon_y + 0.3],
+            color="#4a4a4a", lw=2, zorder=4)
+
+    # Ротик — маленький, расслабленный
+    ax.plot([moon_x + 0.15, moon_x + 0.3, moon_x + 0.45],
+            [moon_y - 0.4, moon_y - 0.5, moon_y - 0.4],
+            color="#4a4a4a", lw=1.5, zorder=4)
+
+    # Румянец
+    ax.add_patch(patches.Ellipse((moon_x - 0.4, moon_y - 0.2), 0.5, 0.25,
+                 color="#ffb3c1", alpha=0.7, zorder=4))
+
+    # «Z-z-z» всплывают над луной
+    for i in range(3):
+        phase = ((t / duration) * 1.5 + i / 3) % 1.0
+        zx = moon_x + 1.6 + phase * 1.5
+        zy = moon_y + 0.8 + phase * 1.8
+        size = 10 + i * 6
+        alpha = 1.0 - phase
+        ax.text(zx, zy, "z", fontsize=size, color="#a8dadc",
+                alpha=alpha, style="italic", fontweight="bold",
+                ha="center", zorder=5)
+
+    # Облака-«подушки» внизу — плавно дышат
+    for (cx, base_y, base_w) in [(-5, -4, 4), (2, -4.5, 5), (7, -3.8, 3.5)]:
+        breathe = 1.0 + 0.08 * np.sin(t * 1.5 + cx)
+        for (dx, dy, r) in [(-1.0, 0, 0.8), (0, 0.3, 1.0), (1.0, 0, 0.8)]:
+            ax.add_patch(patches.Ellipse(
+                (cx + dx * breathe, base_y + dy),
+                r * 2 * breathe, r * 1.4,
+                color="#5a7a9a", alpha=0.35, zorder=1))
+
+    ax.text(0, 6.6, "спокойной ночки, чудо!", ha="center",
+            fontsize=22, color="#f6f1d1", fontweight="bold",
+            family="Comic Sans MS")
+    ax.text(0, -6.8, "пусть приснится что-то очень тёплое",
+            ha="center", fontsize=11, color="#a8dadc", style="italic")
+
+    plt.tight_layout()
+    return _pixmap_from_fig(fig)

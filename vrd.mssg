@@ -1,0 +1,96 @@
+# Вредина :9 #солнце
+---
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import numpy as np
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from PyQt6.QtGui import QImage, QPixmap
+
+fps = 30
+duration = 1.8
+
+def _pixmap_from_fig(fig):
+    canvas = FigureCanvasAgg(fig)
+    canvas.draw()
+    buf = canvas.buffer_rgba()
+    w, h = canvas.get_width_height()
+    img = QImage(buf, w, h, QImage.Format.Format_RGBA8888)
+    px = QPixmap.fromImage(img).copy()
+    plt.close(fig)
+    return px
+
+def build_frame(t):
+    fig = plt.figure(figsize=(6, 4), dpi=100, facecolor="#fffacd")
+    ax = fig.add_subplot(111)
+    ax.set_xlim(-10, 10)
+    ax.set_ylim(-8, 8)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    # Лёгкое покачивание головы
+    tilt = np.sin(t / duration * 2 * np.pi) * 6
+
+    # Морда
+    face = patches.Ellipse((0, 0), 6.5, 5.5, angle=tilt,
+                            color="#f7b267", ec="#a86038", lw=2, zorder=2)
+    ax.add_patch(face)
+
+    # Ушки
+    ax.add_patch(patches.Polygon([(-2.2, 2.2), (-1.7, 3.8), (-0.5, 2.6)],
+                 closed=True, color="#f7b267", ec="#a86038", lw=2, zorder=2))
+    ax.add_patch(patches.Polygon([(2.2, 2.2), (1.7, 3.8), (0.5, 2.6)],
+                 closed=True, color="#f7b267", ec="#a86038", lw=2, zorder=2))
+
+    # Глаза-«хитрые щёлочки»
+    ax.plot([-1.8, -0.9, 0], [0.6, 0.9, 0.6], color="#333", lw=3, zorder=4)
+    ax.plot([0, 0.9, 1.8], [0.6, 0.9, 0.6], color="#333", lw=3, zorder=4)
+
+    # Бровки-домики «вредина»
+    ax.plot([-1.6, -0.9], [1.6, 1.3], color="#333", lw=2.5, zorder=4)
+    ax.plot([1.6, 0.9], [1.3, 1.6], color="#333", lw=2.5, zorder=4)
+
+    # Носик
+    ax.add_patch(patches.Polygon([(-0.2, -0.1), (0.2, -0.1), (0, -0.35)],
+                 closed=True, color="#a86038", zorder=4))
+
+    # Язычок — качается
+    tongue_wag = np.sin(t / duration * 2 * np.pi * 3) * 8
+    tongue = patches.Ellipse((0.2, -1.3), 1.0, 1.6, angle=tongue_wag,
+                              color="#ff6b6b", ec="#c92a2a", lw=1.5, zorder=5)
+    ax.add_patch(tongue)
+    # разделительная линия на язычке
+    ax.plot([0.2, 0.2], [-1.8, -0.8], color="#c92a2a", lw=1, zorder=6)
+
+    # Румянец
+    ax.add_patch(patches.Ellipse((-2.4, -0.6), 1.0, 0.6,
+                 color="#ff8fab", alpha=0.7, zorder=3))
+    ax.add_patch(patches.Ellipse((2.4, -0.6), 1.0, 0.6,
+                 color="#ff8fab", alpha=0.7, zorder=3))
+
+    # Усы
+    for dx, dy in [(-3.2, 0.3), (-3.3, -0.1), (-3.2, -0.5),
+                   (3.2, 0.3), (3.3, -0.1), (3.2, -0.5)]:
+        sign = -1 if dx < 0 else 1
+        ax.plot([dx, dx + sign * 0.7], [dy, dy + 0.1 * sign], color="#333",
+                lw=1.2, zorder=4)
+
+    # Летящие «сердечки-вредины» вокруг
+    for i in range(5):
+        phase = (t / duration + i / 5) % 1.0
+        a = i * 1.3 + t * 1.5
+        r = 5.5 + phase * 2.5
+        alpha = 1.0 - phase
+        sx, sy = r * np.cos(a), r * np.sin(a) + 1
+        ax.scatter([sx], [sy], s=80, color="#ff4d6d", marker="X",
+                   alpha=alpha, zorder=6)
+
+    ax.text(0, 6.5, "вредина :9", ha="center",
+            fontsize=28, color="#a86038", fontweight="bold",
+            family="Comic Sans MS")
+    ax.text(0, -6.8, "(но ты всё равно зайка)",
+            ha="center", fontsize=11, color="#666", style="italic")
+
+    plt.tight_layout()
+    return _pixmap_from_fig(fig)

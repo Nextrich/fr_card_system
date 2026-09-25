@@ -1,0 +1,85 @@
+# Хорошего дня) #солнце
+---
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import numpy as np
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from PyQt6.QtGui import QImage, QPixmap
+
+fps = 30
+duration = 3.0
+
+def _pixmap_from_fig(fig):
+    canvas = FigureCanvasAgg(fig)
+    canvas.draw()
+    buf = canvas.buffer_rgba()
+    w, h = canvas.get_width_height()
+    img = QImage(buf, w, h, QImage.Format.Format_RGBA8888)
+    px = QPixmap.fromImage(img).copy()
+    plt.close(fig)
+    return px
+
+def build_frame(t):
+    fig = plt.figure(figsize=(6, 4), dpi=100, facecolor="#fffbe6")
+    ax = fig.add_subplot(111)
+    ax.set_xlim(-10, 10)
+    ax.set_ylim(-8, 8)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    # Солнце слегка дышит
+    pulse = 1.0 + 0.06 * np.sin(t / duration * 2 * np.pi)
+    sun_r = 2.3 * pulse
+
+    # Лучи вращаются
+    rotation = t / duration * 2 * np.pi
+    for i in range(16):
+        a = i * np.pi / 8 + rotation
+        r1, r2 = sun_r + 0.4, sun_r + 1.8
+        # разные длины лучей — «лучистость»
+        r2_eff = r2 + 0.3 * np.sin(i * 1.7 + t * 4)
+        x1, y1 = r1 * np.cos(a), r1 * np.sin(a)
+        x2, y2 = r2_eff * np.cos(a), r2_eff * np.sin(a)
+        ax.plot([x1, x2], [y1, y2], color="#ffb703",
+                linewidth=3.5, solid_capstyle="round", zorder=1)
+
+    # Внешний ореол
+    for r, alpha in [(sun_r + 1.2, 0.15), (sun_r + 0.7, 0.25)]:
+        ax.add_patch(patches.Circle((0, 0), r, color="#ffe066",
+                     alpha=alpha, zorder=1))
+
+    # Тело солнца
+    ax.add_patch(patches.Circle((0, 0), sun_r, color="#ffd60a",
+                 ec="#ffb703", lw=2, zorder=2))
+    ax.add_patch(patches.Circle((0, 0), sun_r * 0.85, color="#ffea00",
+                 zorder=3))
+
+    # Глаза
+    eye_y = 0.4
+    ax.add_patch(patches.Circle((-0.7, eye_y), 0.22, color="#333", zorder=4))
+    ax.add_patch(patches.Circle((0.7, eye_y), 0.22, color="#333", zorder=4))
+
+    # Улыбка — слегка меняется (более/менее широкая)
+    smile = 0.55 + 0.1 * np.sin(t / duration * 2 * np.pi * 2)
+    xs = np.linspace(-0.9, 0.9, 30)
+    ys = -0.4 - smile * np.cos(xs * 1.5) + smile
+    ax.plot(xs, ys - 0.3, color="#8a5a00", lw=3.5, zorder=4,
+            solid_capstyle="round")
+
+    # Румянец — пульсирует
+    blush_alpha = 0.5 + 0.3 * abs(np.sin(t / duration * 2 * np.pi))
+    ax.add_patch(patches.Ellipse((-1.3, -0.2), 0.7, 0.4,
+                 color="#ff8fab", alpha=blush_alpha, zorder=4))
+    ax.add_patch(patches.Ellipse((1.3, -0.2), 0.7, 0.4,
+                 color="#ff8fab", alpha=blush_alpha, zorder=4))
+
+    ax.text(0, 6.5, "хорошего дня)", ha="center",
+            fontsize=26, color="#e85d04", fontweight="bold",
+            family="Comic Sans MS")
+    ax.text(0, -6.8, "☕ + ☀ = отличный день",
+            ha="center", fontsize=12, color="#7f5539", style="italic")
+
+    plt.tight_layout()
+    return _pixmap_from_fig(fig)
