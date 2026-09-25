@@ -1,0 +1,49 @@
+# С добрым утром #солнце
+---
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import math
+
+fig = plt.figure(figsize=(6, 4), dpi=100)
+ax = fig.add_subplot(111)
+ax.set_xlim(-10, 10)
+ax.set_ylim(-8, 8)
+ax.set_aspect("equal")
+ax.axis("off")
+
+# Текст "с добрым утром" сверху
+ax.text(0, 6.5, "с добрым утром", ha="center", va="center",
+        fontsize=22, color="deeppink", fontweight="bold",
+        family="Comic Sans MS")
+
+# Большое сердечко по центру
+t = [i * math.pi / 180 for i in range(0, 361, 2)]
+x = [16 * math.sin(a) ** 3 * 0.35 for a in t]
+y = [(13 * math.cos(a) - 5 * math.cos(2*a) - 2 * math.cos(3*a) - math.cos(4*a)) * 0.35 for a in t]
+ax.fill(x, y, color="red", alpha=0.9)
+ax.plot(x, y, color="darkred", linewidth=1.5)
+
+# Маленькие сердечки по бокам
+for cx, cy, s in [(-7, -5, 0.15), (7, -5, 0.15), (-6, 4, 0.1), (6, 4, 0.1)]:
+    xs = [16 * math.sin(a) ** 3 * s + cx for a in t]
+    ys = [(13 * math.cos(a) - 5 * math.cos(2*a) - 2 * math.cos(3*a) - math.cos(4*a)) * s + cy for a in t]
+    ax.fill(xs, ys, color="hotpink", alpha=0.8)
+
+# Подпись внизу
+ax.text(0, -7, "хорошего дня, солнце!", ha="center", va="center",
+        fontsize=12, color="#555", style="italic")
+
+plt.tight_layout()
+
+# Возвращаем результат для отображения в приложении
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+canvas = FigureCanvasAgg(fig)
+canvas.draw()
+buf = canvas.buffer_rgba()
+w, h = canvas.get_width_height()
+
+from PyQt6.QtGui import QImage, QPixmap
+qimg = QImage(buf, w, h, QImage.Format.Format_RGBA8888)
+result = QPixmap.fromImage(qimg).copy()  # .copy() — чтобы данные не пропали
+plt.close(fig)
